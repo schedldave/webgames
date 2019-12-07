@@ -71,6 +71,7 @@ function init(resources) {
   //create scenegraph
   root = createSceneGraph(gl, resources);
 
+  // add the same scenegraph (children) to the pickingShader
   pickingShader.children = root.children;
 
 
