@@ -1,2 +1,5 @@
-# webgames
-A collection of games. (Some are) based on the webgl framework from JKU
+# Collection of games
+Based on the webgl framework used in the Computer Graphics Lab teached at Johannes Kepler University.
+
+## [Memory](./memory/)
+
