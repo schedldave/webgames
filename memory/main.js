@@ -55,9 +55,12 @@ loadResources({
   texture_diffuse_aliasing: '../textures/debug_aliasing_512x512.png',
   texture_firefox: '../textures/firefox.png',
   model: '../models/C-3PO.obj',
-  model2: '../models/teapot.obj'
+  model2: '../models/teapot.obj',
+  json: 'cards.json'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
+
+  console.log(resources.json);
 
   render(0);
 });
