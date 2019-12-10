@@ -17,6 +17,7 @@ var numCards = 16; // must be multiple of 2!
 var currentTime = 0;
 var selection = new Array();
 var selectableCards = numCards;
+var cardImages = null;
 
 var pickingShader;
 
@@ -49,6 +50,7 @@ loadResources({
   vs: 'shader/texture.vs.glsl',
   fs: 'shader/texture.fs.glsl',
   picking_fs: 'shader/picking.fs.glsl',
+  texture_bg: '../textures/trywood.jpg',
   texture_diffuse: '../textures/wood.png',
   texture_diffuse2: '../textures/checkerboard.jpg',
   texture_diffuse3: '../textures/brick.jpg',
@@ -58,9 +60,25 @@ loadResources({
   model2: '../models/teapot.obj',
   json: 'cards.json'
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
+  
+  if(resources.json){
+    cardImages = resources.json.images;
+    resources.json.images.forEach(function(img, index) {
+      this[index] = resources.json.folder + "/" + img;
+    }, cardImages); // use arr as this
+  }
+  
   init(resources);
 
-  console.log(resources.json);
+  //console.log(resources.json);
+  /*
+  if(resources.json){
+    resources.json.images.forEach( (img,index) => {
+      console.log(img);
+      console.log(index);
+    });
+  }*/
+  
 
   render(0);
 });
@@ -89,7 +107,7 @@ function init(resources) {
 
 function createSceneGraph(gl, resources) {
 
-  textures = {checkerboard: resources.texture_diffuse2, wood: resources.texture_diffuse, brick: resources.texture_diffuse3, debug: resources.texture_diffuse_aliasing };
+  textures = {trywood: resources.texture_bg, checkerboard: resources.texture_diffuse2, wood: resources.texture_diffuse, brick: resources.texture_diffuse3, debug: resources.texture_diffuse_aliasing };
   models = {  none: [],
               c3po: [new RenderSGNode(resources.model)],
               teapot: [new TransformationSGNode(glm.transform({scale:[.1,.1,.1], translate:[0,.9,0]}), [new RenderSGNode(resources.model2)])] };
@@ -118,17 +136,17 @@ function createSceneGraph(gl, resources) {
   {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
-    light.ambient = [0.2, 0.2, 0.2, 1];
+    light.ambient = [0.5, 0.5, 0.5, 1];
     light.diffuse = [0.8, 0.8, 0.8, 1];
-    light.specular = [1, 1, 1, 1];
+    light.specular = [.1, .1, .1, 1];
     light.position = [0, 0, 0];
 
     rotateLight = new TransformationSGNode(mat4.create());
-    let translateLight = new TransformationSGNode(glm.translate(0,2,2)); //translating the light is the same as setting the light position
+    let translateLight = new TransformationSGNode(glm.translate(0,2,.2)); //translating the light is the same as setting the light position
 
     rotateLight.append(translateLight);
     translateLight.append(light);
-    translateLight.append(createLightSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
+    //translateLight.append(createLightSphere()); //add sphere for debugging: since we use 0,0,0 as our light position the sphere is at the same position as the light source
     root.append(rotateLight);
   }
 
@@ -154,12 +172,12 @@ function createSceneGraph(gl, resources) {
   {
     //initialize floor
     textureNode = new TextureSGNode(Object.values(textures)[0], 0, 'u_diffuseTex',
-                    new RenderSGNode(makeQuad(5,5)));
+                    new RenderSGNode(makeRect(5,5)));
     let floor = new MaterialSGNode( textureNode  );
 
     //dark
     floor.ambient = [0.1, 0.1, 0.1, 1];
-    floor.diffuse = [0.5, 0.5, 0.5, 1];
+    floor.diffuse = [0.7, 0.7, 0.7, 1];
     floor.specular = [0.5, 0.5, 0.5, 1];
     floor.shininess = 50.0;
 
@@ -194,21 +212,34 @@ function createSceneGraph(gl, resources) {
 }
 
 function createCard(sgNode,texture,id,u,v,pairid){
-    //initialize texture
+    //backside of card
     let textureNode = new TextureSGNode(texture, 0, 'u_diffuseTex',
-                    new RenderSGNode(makeQuad(.4,.4)));
+                    new RenderSGNode(makeRect(.4,.4)));
     // init material
     let material = new MaterialSGNode(  );
     //some material settings:
     material.ambient = [0.1, 0.1, 0.1, 1];
-    material.diffuse = [0.5, 0.5, 0.5, 1];
+    material.diffuse = [0.9, 0.9, 0.9, 1];
     material.specular = [0.5, 0.5, 0.5, 1];
     material.shininess = 5.0;
 
     // Uniform for picking 
     let idNode = new SetUniformSGNode('u_objectId', id);
-    material.append(idNode);
     idNode.append(textureNode);
+    material.append(idNode);
+    
+
+    // frontside of card
+    if(cardImages){
+        
+        loadResources({
+          img: cardImages[pairid],
+        }).then(function (newresources /*an object containing our keys with the loaded resources*/) {
+            let frontNode = new TextureSGNode(newresources.img, 0, 'u_diffuseTex',new RenderSGNode(makeRect(.4,.4)));
+            let pNode = new TransformationSGNode(glm.transform({ translate: [0,0,-0.01], rotateX: 180, scale: 1}),frontNode);
+            idNode.append(pNode);
+        });
+    }
 
     let positionTransf = new TransformationSGNode(glm.transform({ translate: [u,0,v], rotateX: -90, scale: 1}));
     let animation = new TransformationSGNode(glm.transform({ translate: [0,0,0], rotateX: 0, scale: 1}), [
@@ -267,25 +298,6 @@ function initTurnAnimation(card,startTime,duration)
     }
 }
 
-
-
-function makeQuad(width, height) {
-  //var width = 5;
-  //var height = 5;
-  var position = [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0];
-  var normal = [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1];
-  var texturecoordinates = [0, 0,   1, 0,   1, 1,   0,1];
-  //var texturecoordinates = [0, 0,   5, 0,   5, 5,   0, 5];
-  var index = [0, 1, 2,   2, 3, 0];
-  return {
-    position: position,
-    normal: normal,
-    texture: texturecoordinates,
-    index: index
-  };
-}
-
-
 function render(timeInMilliseconds,forPicking) {
   checkForWindowResize(gl);
   currentTime = timeInMilliseconds;
@@ -299,7 +311,7 @@ function render(timeInMilliseconds,forPicking) {
   const context = createSGContext(gl);
   context.projectionMatrix = mat4.perspective(mat4.create(), convertDegreeToRadians(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
   //very primitive camera implementation
-  let lookAtMatrix = mat4.lookAt(mat4.create(), [0,10,0], [0,0,0], [1,1,0]);
+  let lookAtMatrix = mat4.lookAt(mat4.create(), [0,10,0], [0,0,0], [0,.1,1]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
                           glm.rotateX(camera.rotation.y),
                           glm.rotateY(camera.rotation.x));
@@ -309,7 +321,7 @@ function render(timeInMilliseconds,forPicking) {
   context.timeInMilliseconds = timeInMilliseconds;
 
   rotateNode.matrix = glm.rotateY(timeInMilliseconds*-0.01);
-  rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
+  //rotateLight.matrix = glm.rotateY(timeInMilliseconds*0.05);
 
   cards.forEach(card => {
     card.animate(timeInMilliseconds);
@@ -350,8 +362,8 @@ function initInteraction(canvas) {
     const delta = { x : mouse.pos.x - pos.x, y: mouse.pos.y - pos.y };
     if (mouse.leftButtonDown) {
       //add the relative movement of the mouse to the rotation variables
-  		camera.rotation.x += delta.x;
-  		camera.rotation.y += delta.y;
+  		//camera.rotation.x += delta.x;
+  		//camera.rotation.y += delta.y;
     }
     mouse.pos = pos;
   });
@@ -363,12 +375,8 @@ function initInteraction(canvas) {
       var pixels = new Uint8Array(4);
       render(currentTime,true);
       gl.readPixels(mouse.pos.x, mouse.pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      //gl.uniform1i(u_PickedFace, pixels[3]);
-      //draw(gl, n, currentAngle, vpMatrix, u_ModelMatrix, modelMatrix, mvpMatrix, u_MvpMatrix, u_NormalMatrix, normalMatrix);
-      //console.log(pixels[0]);
-      //alertHitMessage(pixels[3], gl, u_HighlightFace);
-
       let cardObjectId = pixels[0];
+
       if(cardObjectId>0)
       {
         cards.forEach(card => {
@@ -380,6 +388,12 @@ function initInteraction(canvas) {
                 selectableCards -= 2;
                 if(selectableCards==0){
                   console.log( 'game is over!' );
+                  setTimeout(function () {
+                    cards.forEach(card => {card.flip();});
+                  }, 1000);
+                  setTimeout(function () {
+                    window.location.reload(false);
+                  }, 2000);
                 }
               } else {
                 let c1=selection[0];
@@ -413,10 +427,6 @@ function initInteraction(canvas) {
     //enable/disable anisotropic filtering (only visible in combination with mipmapping)
     globalSettings.useAnisotropicFiltering = !globalSettings.useAnisotropicFiltering;
     toggleAnisotropicFiltering( globalSettings.useAnisotropicFiltering );
-  }
-  if (event.key === '1') {
-    console.log("key 1");
-    flipCard(0);
   }
 });
 }
