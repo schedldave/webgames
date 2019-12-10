@@ -15,7 +15,11 @@ const camera = {
 var cards = [];
 var numCards = 16; // must be multiple of 2!
 var currentTime = 0;
+var selection = new Array();
+var selectableCards = numCards;
+
 var pickingShader;
+
 
 // debug:
 var showPicking = false; // for debugging
@@ -165,6 +169,9 @@ function createSceneGraph(gl, resources) {
     let liftCardsTransfNode = new TransformationSGNode(glm.transform({ translate: [0,0.5,0], rotateX: 0, scale: 1}));
     root.append(liftCardsTransfNode);
 
+    let numPairs = numCards / 2;
+    let pairids = permuteArray([...range(0,numPairs-1),...range(0,numPairs-1)]);
+
     // number of cards in x and y (layout)
     let nCardsX = Math.ceil(Math.sqrt(numCards));
     let nCardsY = Math.ceil(numCards / nCardsX);
@@ -174,7 +181,7 @@ function createSceneGraph(gl, resources) {
       if((i % nCardsX)==0) 
         irow ++;
       let icol = i - irow*nCardsX;
-      let card = createCard(liftCardsTransfNode,resources.texture_firefox,i+1,irow-(nCardsX-1)/2.0,icol-(nCardsY-1)/2.0);
+      let card = createCard(liftCardsTransfNode,resources.texture_firefox,i+1,irow-(nCardsX-1)/2.0,icol-(nCardsY-1)/2.0,pairids[i]);
       cards.push(card);
     }
   }
@@ -183,7 +190,7 @@ function createSceneGraph(gl, resources) {
   return root;
 }
 
-function createCard(sgNode,texture,id,u,v){
+function createCard(sgNode,texture,id,u,v,pairid){
     //initialize texture
     let textureNode = new TextureSGNode(texture, 0, 'u_diffuseTex',
                     new RenderSGNode(makeQuad(.4,.4)));
@@ -212,6 +219,7 @@ function createCard(sgNode,texture,id,u,v){
       transformation: animation,
       flipped: false,
       id: id,
+      pairid: pairid,
       animate: function(timeInMilliseconds){},
       flip: function()
       {
@@ -219,6 +227,30 @@ function createCard(sgNode,texture,id,u,v){
         initTurnAnimation(this,currentTime,1000);
       }
     }
+}
+
+function* range(start, end) {
+  for (let i = start; i <= end; i++) {
+      yield i;
+  }
+}
+
+function permuteArray( sort )
+{
+  // first make a copy of the original sort array
+  var rsort = sort.slice();
+
+  // then proceed to shuffle the rsort array      
+  for(var idx = 0; idx < rsort.length; idx++)
+  {
+    var swpIdx = idx + Math.floor(Math.random() * (rsort.length - idx));
+    // now swap elements at idx and swpIdx
+    var tmp = rsort[idx];
+    rsort[idx] = rsort[swpIdx];
+    rsort[swpIdx] = tmp;
+  }
+  // here rsort[] will have been randomly shuffled (permuted)
+  return rsort;
 }
 
 function initTurnAnimation(card,startTime,duration)
@@ -330,16 +362,33 @@ function initInteraction(canvas) {
       gl.readPixels(mouse.pos.x, mouse.pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       //gl.uniform1i(u_PickedFace, pixels[3]);
       //draw(gl, n, currentAngle, vpMatrix, u_ModelMatrix, modelMatrix, mvpMatrix, u_MvpMatrix, u_NormalMatrix, normalMatrix);
-      console.log(pixels[0]);
+      //console.log(pixels[0]);
       //alertHitMessage(pixels[3], gl, u_HighlightFace);
 
       let cardObjectId = pixels[0];
       if(cardObjectId>0)
       {
         cards.forEach(card => {
-          if(card.id == cardObjectId)
-          {
+          if(card.id == cardObjectId && !card.flipped ) {
+            selection.push(card);
             card.flip();
+            if(selection.length==2){
+              if(selection[0].pairid === selection[1].pairid){
+                selectableCards -= 2;
+                if(selectableCards==0){
+                  console.log( 'game is over!' );
+                }
+              } else {
+                let c1=selection[0];
+                let c2=selection[1];
+                setTimeout(function () {
+                  c1.flip();
+                  c2.flip();
+                }, 1500);
+                
+              }
+              selection = []; // clear
+            }
           }
         });
       }
