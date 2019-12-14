@@ -101,6 +101,7 @@ function createContext(width, height, isFixed) {
   canvas.height = height || 400;
   canvas.sizeFixed = isFixed || false;
   document.body.appendChild(canvas);
+  //document.body.requestFullscreen(); <! not allowed!
   // this needs to be enabled for picking:
   var ctx = canvas.getContext("experimental-webgl", {preserveDrawingBuffer: true});
 
@@ -750,7 +751,23 @@ class TextureSGNode extends SGNode {
 
     //generate mipmaps (optional)
     gl.generateMipmap(gl.TEXTURE_2D);
-    // use:         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    // use:         
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+    // enable anisotropic filtering
+    var ext = (
+      gl.getExtension('EXT_texture_filter_anisotropic') ||
+      gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+      gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    );
+    if(!ext){
+      console.log('WARNING: Anisotropic filtering not supported!');
+      
+    } else {
+      //console.log('Anisotropic filtering enabled');
+      var max_anisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+      gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
+    }
 
 
     gl.bindTexture(gl.TEXTURE_2D, null);

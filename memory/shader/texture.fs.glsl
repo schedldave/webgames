@@ -46,6 +46,7 @@ vec4 calculateSimplePointLight( Light light, Material material,
 
 	if (useTexColor) {
 		material.diffuse = texColor;
+		material.ambient = texColor;
 	}
 
 	//compute diffuse term

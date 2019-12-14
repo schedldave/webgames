@@ -11,6 +11,9 @@ const camera = {
   }
 };
 
+// background color:
+var bgColor =[29/255, 135/255, 229/255];
+
 // game stuff
 var cards = [];
 var numCards = 16; // must be multiple of 2!
@@ -42,8 +45,8 @@ var models; // store all models
 
 // global Settings
 var globalSettings = function(){};
-globalSettings.useAnisotropicFiltering = false;
-globalSettings.useMipmapping = false;
+globalSettings.useAnisotropicFiltering = true;
+globalSettings.useMipmapping = true;
 
 //load the required resources using a utility function
 loadResources({
@@ -55,7 +58,7 @@ loadResources({
   texture_diffuse2: '../textures/checkerboard.jpg',
   texture_diffuse3: '../textures/brick.jpg',
   texture_diffuse_aliasing: '../textures/debug_aliasing_512x512.png',
-  texture_firefox: '../textures/firefox.png',
+  texture_card: '../textures/card_bg.png',
   model: '../models/C-3PO.obj',
   model2: '../models/teapot.obj',
   json: 'cards.json'
@@ -136,8 +139,8 @@ function createSceneGraph(gl, resources) {
   {
     //initialize light
     let light = new LightSGNode(); //use now framework implementation of light node
-    light.ambient = [0.5, 0.5, 0.5, 1];
-    light.diffuse = [0.8, 0.8, 0.8, 1];
+    light.ambient = [0.8, 0.8, 0.8, 1];
+    light.diffuse = [0.2, 0.2, 0.2, 1];
     light.specular = [.1, .1, .1, 1];
     light.position = [0, 0, 0];
 
@@ -169,6 +172,8 @@ function createSceneGraph(gl, resources) {
     root.append(rotateNode);
   }
 
+
+  /*
   {
     //initialize floor
     textureNode = new TextureSGNode(Object.values(textures)[0], 0, 'u_diffuseTex',
@@ -185,6 +190,7 @@ function createSceneGraph(gl, resources) {
       floor
     ]));
   }
+  */
 
   { // create cards
     let liftCardsTransfNode = new TransformationSGNode(glm.transform({ translate: [0,0.5,0], rotateX: 0, scale: 1}));
@@ -202,7 +208,7 @@ function createSceneGraph(gl, resources) {
       if((i % nCardsX)==0) 
         irow ++;
       let icol = i - irow*nCardsX;
-      let card = createCard(liftCardsTransfNode,resources.texture_firefox,i+1,irow-(nCardsX-1)/2.0,icol-(nCardsY-1)/2.0,pairids[i]);
+      let card = createCard(liftCardsTransfNode,resources.texture_card,i+1,irow-(nCardsX-1)/2.0,icol-(nCardsY-1)/2.0,pairids[i]);
       cards.push(card);
     }
   }
@@ -218,9 +224,9 @@ function createCard(sgNode,texture,id,u,v,pairid){
     // init material
     let material = new MaterialSGNode(  );
     //some material settings:
-    material.ambient = [0.1, 0.1, 0.1, 1];
-    material.diffuse = [0.9, 0.9, 0.9, 1];
-    material.specular = [0.5, 0.5, 0.5, 1];
+    material.ambient = [0.5, 0.5, 0.5, 1];
+    material.diffuse = [0.5, 0.5, 0.5, 1];
+    material.specular = [0.8, 0.8, 0.8, 1];
     material.shininess = 5.0;
 
     // Uniform for picking 
@@ -304,7 +310,7 @@ function render(timeInMilliseconds,forPicking) {
 
   //setup viewport
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  gl.clearColor(0.9, 0.9, 0.9, 1.0);
+  gl.clearColor(bgColor[0],bgColor[1],bgColor[2], 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   //setup context and camera matrices
@@ -421,59 +427,14 @@ function initInteraction(canvas) {
     if (event.code === 'KeyM') {
     //enable/disable mipmapping
     globalSettings.useMipmapping = !globalSettings.useMipmapping;
-    toggleMipmapping( globalSettings.useMipmapping );
-  }
-  if (event.code === 'KeyA') {
-    //enable/disable anisotropic filtering (only visible in combination with mipmapping)
-    globalSettings.useAnisotropicFiltering = !globalSettings.useAnisotropicFiltering;
-    toggleAnisotropicFiltering( globalSettings.useAnisotropicFiltering );
-  }
-});
-}
-
-
-function toggleMipmapping(value){
-//enable/disable mipmapping
-gl.activeTexture(gl.TEXTURE0 + textureNode.textureunit);
-gl.bindTexture(gl.TEXTURE_2D, textureNode.textureId);
-if(value)
-{
-  console.log('Mipmapping enabled');
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-}
-else
-{
-  console.log('Mipmapping disabled');
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-}
-gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
-function toggleAnisotropicFiltering(value){
-  //enable/disable anisotropic filtering (only visible in combination with mipmapping)
-  var ext = (
-    gl.getExtension('EXT_texture_filter_anisotropic') ||
-    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-  );
-  if(!ext){
-    console.log('Anisotropic filtering not supported!');
-    return;
-  }
-  gl.activeTexture(gl.TEXTURE0 + textureNode.textureunit);
-  gl.bindTexture(gl.TEXTURE_2D, textureNode.textureId);
-  if(value)
-  {
-    console.log('Anisotropic filtering enabled');
-    var max_anisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-    gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
-  }
-  else
-  {
-    console.log('Anisotropic filtering disabled');
-    gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, 1);
-  }
-  gl.bindTexture(gl.TEXTURE_2D, null);
+    //toggleMipmapping( globalSettings.useMipmapping );
+    }
+    if (event.code === 'KeyA') {
+      //enable/disable anisotropic filtering (only visible in combination with mipmapping)
+      globalSettings.useAnisotropicFiltering = !globalSettings.useAnisotropicFiltering;
+      //toggleAnisotropicFiltering( globalSettings.useAnisotropicFiltering );
+    }
+  });
 }
 
 function convertDegreeToRadians(degree) {
@@ -483,6 +444,7 @@ function convertDegreeToRadians(degree) {
 
 function initGUI(){
 
+  /*
   var gui = new dat.GUI();
 
   gui.add( globalSettings, 'useMipmapping' ).onChange(function(value){
@@ -493,6 +455,7 @@ function initGUI(){
   }).listen();
 
 
+  
   let tmpTexture = function(){}; tmpTexture.texture = Object.keys(textures)[0];
   gui.add( tmpTexture, 'texture', Object.keys(textures) ).onChange(function(value){
     textureNode.image = textures[value];
@@ -506,7 +469,9 @@ function initGUI(){
   gui.add( tmpModel, 'model', Object.keys(models) ).onChange(function(value){
     c3po.children = models[value];
   });
+  
 
   gui.closed = true; // close gui to avoid using up too much screen
+  */
 
 }
