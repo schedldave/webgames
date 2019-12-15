@@ -362,6 +362,7 @@ function initInteraction(canvas) {
   canvas.addEventListener('mousedown', function(event) {
     mouse.pos = toPos(event);
     mouse.leftButtonDown = event.button === 0;
+    picking(mouse)
   });
   canvas.addEventListener('mousemove', function(event) {
     const pos = toPos(event);
@@ -376,46 +377,12 @@ function initInteraction(canvas) {
   canvas.addEventListener('mouseup', function(event) {
     mouse.pos = toPos(event);
     mouse.leftButtonDown = false;
-    // picking
-    {
-      var pixels = new Uint8Array(4);
-      render(currentTime,true);
-      gl.readPixels(mouse.pos.x, mouse.pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      let cardObjectId = pixels[0];
-
-      if(cardObjectId>0)
-      {
-        cards.forEach(card => {
-          if(card.id == cardObjectId && !card.flipped ) {
-            selection.push(card);
-            card.flip();
-            if(selection.length==2){
-              if(selection[0].pairid === selection[1].pairid){
-                selectableCards -= 2;
-                if(selectableCards==0){
-                  console.log( 'game is over!' );
-                  setTimeout(function () {
-                    cards.forEach(card => {card.flip();});
-                  }, 1000);
-                  setTimeout(function () {
-                    window.location.reload(false);
-                  }, 2000);
-                }
-              } else {
-                let c1=selection[0];
-                let c2=selection[1];
-                setTimeout(function () {
-                  c1.flip();
-                  c2.flip();
-                }, 1500);
-                
-              }
-              selection = []; // clear
-            }
-          }
-        });
-      }
-    }
+    
+  });
+  canvas.addEventListener("touchstart", function(event) {
+    event.preventDefault();
+    mouse.pos = toPos(event);
+    picking(mouse);
   });
   //register globally
   document.addEventListener('keypress', function(event) {
@@ -437,8 +404,66 @@ function initInteraction(canvas) {
   });
 }
 
+function picking(mouse){
+  // picking
+  {
+    var pixels = new Uint8Array(4);
+    render(currentTime,true); // render scene with picking shader
+    gl.readPixels(mouse.pos.x, mouse.pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); // read pixel corresponding to id
+    let cardObjectId = pixels[0];
+
+    if(cardObjectId>0)
+    {
+      cards.forEach(card => {
+        if(card.id == cardObjectId && !card.flipped ) {
+          selection.push(card);
+          card.flip();
+          if(selection.length==2){
+            if(selection[0].pairid === selection[1].pairid){
+              selectableCards -= 2;
+              if(selectableCards==0){
+                console.log( 'game is over!' );
+                setTimeout(function () {
+                  cards.forEach(card => {card.flip();});
+                }, 1000);
+                setTimeout(function () {
+                  window.location.reload(false);
+                }, 2000);
+              }
+            } else {
+              let c1=selection[0];
+              let c2=selection[1];
+              setTimeout(function () {
+                c1.flip();
+                c2.flip();
+              }, 1500);
+              
+            }
+            selection = []; // clear
+          }
+        }
+      });
+    }
+  }
+}
+
 function convertDegreeToRadians(degree) {
   return degree * Math.PI / 180
+}
+
+function toggleFullScreen() {
+  var doc = window.document;
+  var docEl = doc.documentElement;
+
+  var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+  var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+  if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+    requestFullScreen.call(docEl);
+  }
+  else {
+    cancelFullScreen.call(doc);
+  }
 }
 
 
