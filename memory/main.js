@@ -353,7 +353,7 @@ function initInteraction(canvas) {
   };
   function toPos(event) {
     //convert to local coordinates
-    const rect = event.target.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
       y: rect.bottom - event.clientY
@@ -362,7 +362,7 @@ function initInteraction(canvas) {
   canvas.addEventListener('mousedown', function(event) {
     mouse.pos = toPos(event);
     mouse.leftButtonDown = event.button === 0;
-    picking(mouse)
+    picking(mouse.pos);
   });
   canvas.addEventListener('mousemove', function(event) {
     const pos = toPos(event);
@@ -379,10 +379,19 @@ function initInteraction(canvas) {
     mouse.leftButtonDown = false;
     
   });
-  canvas.addEventListener("touchstart", function(event) {
-    event.preventDefault();
-    mouse.pos = toPos(event);
-    picking(mouse);
+  canvas.addEventListener("touchstart", function (evt) {
+      evt.preventDefault();
+      console.log("touchstart.");
+      var touches = evt.changedTouches;
+      mouse.pos = toPos(event);
+            
+      for (var i = 0; i < touches.length; i++) {
+        //console.log("touchstart:" + i + "...");
+        //ongoingTouches.push(copyTouch(touches[i]));
+        picking( toPos({clientX: touches[i].pageX, clientY: touches[i].pageY}));
+        
+        //console.log("touchstart:" + i + ".");
+      }
   });
   //register globally
   document.addEventListener('keypress', function(event) {
@@ -404,12 +413,12 @@ function initInteraction(canvas) {
   });
 }
 
-function picking(mouse){
+function picking(pos){
   // picking
   {
     var pixels = new Uint8Array(4);
     render(currentTime,true); // render scene with picking shader
-    gl.readPixels(mouse.pos.x, mouse.pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); // read pixel corresponding to id
+    gl.readPixels(pos.x, pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); // read pixel corresponding to id
     let cardObjectId = pixels[0];
 
     if(cardObjectId>0)
