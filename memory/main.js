@@ -5,6 +5,9 @@
 
 var gl = null;
 const camera = {
+  pos:{
+    x: 0, y: 10, z:0
+  },
   rotation: {
     x: 0,
     y: 0
@@ -177,7 +180,7 @@ function createSceneGraph(gl, resources) {
   {
     //initialize floor
     textureNode = new TextureSGNode(Object.values(textures)[0], 0, 'u_diffuseTex',
-                    new RenderSGNode(makeRect(5,5)));
+                    new RenderSGNode(makeRect(1,1)));
     let floor = new MaterialSGNode( textureNode  );
 
     //dark
@@ -186,14 +189,14 @@ function createSceneGraph(gl, resources) {
     floor.specular = [0.5, 0.5, 0.5, 1];
     floor.shininess = 50.0;
 
-    root.append(new TransformationSGNode(glm.transform({ translate: [0,0,0], rotateX: -90, scale: 1}), [
+    root.append(new TransformationSGNode(glm.transform({ translate: [0,-0.1,0], rotateX: -90, scale: 1}), [
       floor
     ]));
   }
-  */
+  // */
 
   { // create cards
-    let liftCardsTransfNode = new TransformationSGNode(glm.transform({ translate: [0,0.5,0], rotateX: 0, scale: 1}));
+    let liftCardsTransfNode = new TransformationSGNode(glm.transform({ translate: [0,0,0], rotateX: 0, scale: 1}));
     root.append(liftCardsTransfNode);
 
     let numPairs = numCards / 2;
@@ -203,12 +206,29 @@ function createSceneGraph(gl, resources) {
     let nCardsX = Math.ceil(Math.sqrt(numCards));
     let nCardsY = Math.ceil(numCards / nCardsX);
 
+    let halfCardSize = Math.min( 1/nCardsX, 1/nCardsY );
+    let cardSpacing = .01;
+
+    // place cards on a 2x2 square area
+    // o--o -1
+    // |  |
+    // o--o  1
+    //-1  1
+
+    // -1+cardSize to 1+cardSize
+    // o=======================o
+    let possX = linspace( -1+halfCardSize, 1-halfCardSize, nCardsX ); // positions in x
+    let possY = linspace( -1+halfCardSize, 1-halfCardSize, nCardsY ); // positions in y
+
     let irow = -1;
     for (let i = 0; i < numCards; i++) {
       if((i % nCardsX)==0) 
         irow ++;
       let icol = i - irow*nCardsX;
-      let card = createCard(liftCardsTransfNode,resources.texture_card,i+1,irow-(nCardsX-1)/2.0,icol-(nCardsY-1)/2.0,pairids[i]);
+      let card = createCard(liftCardsTransfNode,resources.texture_card,i+1,
+        possX[icol],possY[irow], // position of card
+        halfCardSize-cardSpacing, halfCardSize-cardSpacing, // size of card
+        pairids[i]);
       cards.push(card);
     }
   }
@@ -217,10 +237,10 @@ function createSceneGraph(gl, resources) {
   return root;
 }
 
-function createCard(sgNode,texture,id,u,v,pairid){
+function createCard(sgNode,texture,id,u,v,uSize,vSize,pairid){
     //backside of card
     let textureNode = new TextureSGNode(texture, 0, 'u_diffuseTex',
-                    new RenderSGNode(makeRect(.4,.4)));
+                    new RenderSGNode(makeRect(uSize,vSize)));
     // init material
     let material = new MaterialSGNode(  );
     //some material settings:
@@ -241,7 +261,7 @@ function createCard(sgNode,texture,id,u,v,pairid){
         loadResources({
           img: cardImages[pairid],
         }).then(function (newresources /*an object containing our keys with the loaded resources*/) {
-            let frontNode = new TextureSGNode(newresources.img, 0, 'u_diffuseTex',new RenderSGNode(makeRect(.4,.4)));
+            let frontNode = new TextureSGNode(newresources.img, 0, 'u_diffuseTex',new RenderSGNode(makeRect(uSize,vSize)));
             let pNode = new TransformationSGNode(glm.transform({ translate: [0,0,-0.01], rotateX: 180, scale: 1}),frontNode);
             idNode.append(pNode);
         });
@@ -273,6 +293,15 @@ function* range(start, end) {
   for (let i = start; i <= end; i++) {
       yield i;
   }
+}
+
+function linspace(startValue, stopValue, cardinality) {
+  var arr = [];
+  var step = (stopValue - startValue) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startValue + (step * i));
+  }
+  return arr;
 }
 
 function permuteArray( sort )
@@ -315,9 +344,11 @@ function render(timeInMilliseconds,forPicking) {
 
   //setup context and camera matrices
   const context = createSGContext(gl);
-  context.projectionMatrix = mat4.perspective(mat4.create(), convertDegreeToRadians(30), gl.drawingBufferWidth / gl.drawingBufferHeight, 0.01, 100);
+  let aspect = gl.drawingBufferWidth / gl.drawingBufferHeight;
+  // ToDo: compute proper fovY angle, so that nothing gets clipped! 
+  context.projectionMatrix = mat4.perspective(mat4.create(), convertDegreeToRadians(15), aspect , 0.01, 100);
   //very primitive camera implementation
-  let lookAtMatrix = mat4.lookAt(mat4.create(), [0,10,0], [0,0,0], [0,.1,1]);
+  let lookAtMatrix = mat4.lookAt(mat4.create(), [camera.pos.x,camera.pos.y,camera.pos.z], [0,0,0], [0,.1,1]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
                           glm.rotateX(camera.rotation.y),
                           glm.rotateY(camera.rotation.x));
