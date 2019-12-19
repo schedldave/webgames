@@ -345,8 +345,11 @@ function render(timeInMilliseconds,forPicking) {
   //setup context and camera matrices
   const context = createSGContext(gl);
   let aspect = gl.drawingBufferWidth / gl.drawingBufferHeight;
-  // ToDo: compute proper fovY angle, so that nothing gets clipped! 
-  context.projectionMatrix = mat4.perspective(mat4.create(), convertDegreeToRadians(15), aspect , 0.01, 100);
+  // compute proper fovY angle, so that nothing within the center 2x2 area gets clipped! 
+  let fovRadY = 2 * Math.atan(1/camera.pos.y); 
+  let fovRadX = 2 * Math.atan(1/camera.pos.y/aspect); 
+  let fovRad = Math.max( fovRadY, fovRadX );
+  context.projectionMatrix = mat4.perspective(mat4.create(), fovRad, aspect , 0.01, 100);
   //very primitive camera implementation
   let lookAtMatrix = mat4.lookAt(mat4.create(), [camera.pos.x,camera.pos.y,camera.pos.z], [0,0,0], [0,.1,1]);
   let mouseRotateMatrix = mat4.multiply(mat4.create(),
