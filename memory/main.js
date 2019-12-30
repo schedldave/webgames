@@ -19,7 +19,7 @@ var bgColor =[29/255, 135/255, 229/255];
 
 // game stuff
 var cards = [];
-var numCards = 16; // must be multiple of 2!
+var numCards = 36; // must be multiple of 2!
 var currentTime = 0;
 var selection = new Array();
 var selectableCards = numCards;
@@ -69,9 +69,11 @@ loadResources({
   
   if(resources.json){
     cardImages = resources.json.images;
-    resources.json.images.forEach(function(img, index) {
-      this[index] = resources.json.folder + "/" + img;
-    }, cardImages); // use arr as this
+    if(resources.json.folder.length > 0){
+      resources.json.images.forEach(function(img, index) {
+        this[index] = resources.json.folder + "/" + img;
+      }, cardImages); // use arr as this
+    }
   }
   
   init(resources);
@@ -261,7 +263,7 @@ function createCard(sgNode,texture,id,u,v,uSize,vSize,pairid){
         loadResources({
           img: cardImages[pairid],
         }).then(function (newresources /*an object containing our keys with the loaded resources*/) {
-            let frontNode = new TextureSGNode(newresources.img, 0, 'u_diffuseTex',new RenderSGNode(makeRect(uSize,vSize)));
+            let frontNode =new TextureSGNode(newresources.img, 0, 'u_diffuseTex',new RenderSGNode(makeRect(uSize,vSize)));
             let pNode = new TransformationSGNode(glm.transform({ translate: [0,0,-0.01], rotateX: 180, scale: 1}),frontNode);
             idNode.append(pNode);
         });
@@ -543,3 +545,4 @@ function initGUI(){
   */
 
 }
+
