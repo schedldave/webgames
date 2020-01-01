@@ -128,8 +128,9 @@ function createSceneGraph(gl, resources) {
       root = pickingShader;
   }
   else{
-      root = new ShaderSGNode(createProgram(gl, resources.vs, resources.fs));
+      root = new ShaderSGNode(createProgram(gl, resources.vs, resources.fs));  
   }
+
 
   
 
@@ -341,7 +342,10 @@ function render(timeInMilliseconds,forPicking) {
 
   //setup viewport
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  gl.clearColor(bgColor[0],bgColor[1],bgColor[2], 1.0);
+  if(forPicking)
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  else
+    gl.clearColor(bgColor[0],bgColor[1],bgColor[2], 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   //setup context and camera matrices
@@ -456,6 +460,7 @@ function picking(pos){
     render(currentTime,true); // render scene with picking shader
     gl.readPixels(pos.x, pos.y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); // read pixel corresponding to id
     let cardObjectId = pixels[0];
+    if(showPicking) console.log( cardObjectId );
 
     if(cardObjectId>0)
     {
